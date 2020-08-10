@@ -12,23 +12,14 @@ and limitations under the License.
  */
 package com.beoui.geocell;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import javax.jdo.annotations.PrimaryKey;
-import javax.persistence.Id;
-
-import com.beoui.geocell.annotations.Geocells;
-import com.beoui.geocell.annotations.Latitude;
-import com.beoui.geocell.annotations.Longitude;
 import com.beoui.geocell.comparator.DoubleTupleComparator;
 import com.beoui.geocell.model.BoundingBox;
-import com.beoui.geocell.model.LocationCapable;
 import com.beoui.geocell.model.Point;
 import com.beoui.geocell.model.Tuple;
 
@@ -63,9 +54,12 @@ public final class GeocellUtils {
     public static final float MAX_LONGITUDE = 180.0f;
     public static final float MIN_LATITUDE = -90.0f;
     public static final float MAX_LATITUDE = 90.0f;
+
 	// Geocell algorithm constants.
-    public static final int GEOCELL_GRID_SIZE = 4;
-    private static final String GEOCELL_ALPHABET = "0123456789abcdef";
+    // Set GEOCELL_GRID_SIZE = 2 so transition between levels is not so big to find
+    // the enclosing cell although this will produce larger and more cell strings.
+    public static final int GEOCELL_GRID_SIZE = 2;
+    private static final String GEOCELL_ALPHABET = "0123";
 
     // Direction enumerations.
     private static final int[] NORTHWEST = new int[] {-1,1};
@@ -527,84 +521,5 @@ public final class GeocellUtils {
         result.add(new Tuple<int[], Double>(EAST, distance(new Point(point.getLat(), maxEast), point)));
         Collections.sort(result, new DoubleTupleComparator());
         return result;
-    }
-
-    public static String getKeyString(Object entity) {
-    	if(entity instanceof LocationCapable) {
-    		return ((LocationCapable) entity).getKeyString();
-    	}
-
-    	Field field = getField(entity.getClass(), PrimaryKey.class);
-    	if(field == null) {
-        	field = getField(entity.getClass(), Id.class);
-    	}
-
-    	try {
-	        return field.get(entity).toString();
-        } catch (IllegalArgumentException e) {
-	        // TODO Auto-generated catch block
-			return null;
-        } catch (IllegalAccessException e) {
-	        // TODO Auto-generated catch block
-			return null;
-        }
-    }
-
-	private static Field getField(Class<?> type, Class<? extends Annotation> annotation) {
-	    for(Field field : type.getDeclaredFields()) {
-    		if(field.isAnnotationPresent(annotation)) {
-    			try {
-    				field.setAccessible(true);
-					return field;
-				} catch (IllegalArgumentException e) {
-					// TODO Auto-generated catch block
-					return null;
-				}
-    		}
-    	}
-
-	    Class<?> superClass = type.getSuperclass();
-	    if(superClass != null) {
-	    	return getField(superClass, annotation);
-	    }
-
-	    return null;
-    }
-
-    public static Point getLocation(Object entity) {
-    	if(entity instanceof LocationCapable) {
-    		return ((LocationCapable) entity).getLocation();
-    	}
-    	
-    	Point location = new Point();
-    	
-    	try {
-	        location.setLat(getField(entity.getClass(), Latitude.class).getDouble(entity));
-	    	location.setLon(getField(entity.getClass(), Longitude.class).getDouble(entity));
-        } catch (IllegalArgumentException e1) {
-			try {
-				location.setLat((Double) getField(entity.getClass(), Latitude.class).get(entity));
-				location.setLon((Double) getField(entity.getClass(), Longitude.class).get(entity));
-			} catch (IllegalArgumentException e2) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (IllegalAccessException e2) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-		} catch (IllegalAccessException e1) {
-	        // TODO Auto-generated catch block
-	        e1.printStackTrace();
-        }
-
-        return location;
-    }
-
-    public static String getGeocellsFieldName(Class<?> type) {
-    	if(LocationCapable.class.isAssignableFrom(type)) {
-    		return "geocells";
-    	}
-
-    	return getField(type, Geocells.class).getName();
     }
 }
